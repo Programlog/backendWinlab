@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Early Exit Demo - Rutgers WINLAB</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            flex-direction: column;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .header {
+            width: 100%;
+            background-color: white;
+            color: black;
+            padding: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .header img {
+            width: 180px; /* Adjust as needed */
+            height: auto;
+            margin-right: 1rem;
+            padding: 5px; /* Added padding */
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .header div {
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            margin: 100px auto 0; /* Adjusted margin */
+        }
+        h1 {
+            color: #CC0033; /* Rutgers red */
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+        .upload-area {
+            border: 2px dashed #CC0033; /* Rutgers red */
+            border-radius: 12px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            background-color: rgba(204, 0, 51, 0.1); /* Rutgers red with opacity */
+        }
+        #upload-btn {
+            background-color: #CC0033; /* Rutgers red */
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 1rem;
+        }
+        #upload-btn:hover {
+            background-color: #990026; /* Darker shade of Rutgers red */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        #image-preview {
+            margin: 1.5rem auto 0;
+            max-width: 100%;
+            max-height: 300px;
+            display: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        #image-preview:hover {
+            transform: scale(1.05);
+        }
+        #result {
+            margin-top: 1rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #CC0033; /* Rutgers red */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .file-info {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 0.5rem;
+        }
+        footer {
+            background-color: rgba(255, 255, 255, 0.2); /* More translucent background */
+            padding: 0rem 0.5rem; /* Reduced padding */
+            border-radius: 18px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            margin-top: auto;
+            font-size: 0.9rem;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='winlab.png') }}" alt="Rutgers WINLAB: Wireless Information Network Laboratory logo">
+        <div>R^3 Machine Learning Over Wireless Networks</div>
+    </div>    
+    <div class="container">
+        <h1>Early Exit Demo</h1>
+        <div class="upload-area" id="drop-area">
+            <p>Drag and drop an image<br>or browse to upload.</p>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+            <button id="upload-btn">Upload Image</button>
+        </div>
+        <p class="file-info">File must be JPEG, JPG or PNG and up to 40MB</p>
+        <img id="image-preview" alt="Uploaded image preview">
+        <div class="loader" id="loader"></div>
+        <div id="result"></div>
+        <div id="time"></div>
+    </div>
+    <footer>
+        <p>Team Members: Varun, Akshar, Keerthana</p>
+    </footer>
+
+    <script>
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const imagePreview = document.getElementById('image-preview');
+        const resultDiv = document.getElementById('result');
+        const loader = document.getElementById('loader');
+        const timeDiv = document.getElementById('time');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropArea.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            dropArea.classList.remove('dragover');
+        }
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            const file = files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    uploadImage(file);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                alert('Please select a valid image file (JPEG, JPG, or PNG).');
+            }
+        }
+
+        function uploadImage(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            loader.style.display = 'block';
+            resultDiv.textContent = '';
+            timeDiv.textContent = '';
+
+            const startTime = new Date().getTime();
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const endTime = new Date().getTime();
+                const totalTime = (endTime - startTime) / 1000;
+
+                loader.style.display = 'none';
+                resultDiv.textContent = `${data.result}`;
+                timeDiv.textContent = `Processing time: ${totalTime} seconds (Server: ${data.processing_time.toFixed(2)} seconds)`;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loader.style.display = 'none';
+                resultDiv.textContent = 'An error occurred during processing.';
+            });
+        }
+    </script>
+</body>
+</html>
